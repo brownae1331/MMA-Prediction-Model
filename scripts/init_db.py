@@ -1,7 +1,7 @@
 """Create all tables defined in db.models."""
 
 from db.database import Base, engine
-from db.models import Event, Fight, Fighter  # noqa: F401
+from db.models import Event, Fight, FightRoundStats, Fighter  # noqa: F401
 
 
 def main() -> None:

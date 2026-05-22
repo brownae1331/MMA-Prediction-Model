@@ -1,42 +1,32 @@
-import time
 from datetime import date, datetime
 from urllib.parse import urljoin
 
-import requests
 from bs4 import BeautifulSoup
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
 from schemas.fighter import Fighter
+from scrapers.browser_session import BrowserSession, PageResponse
 
 
 class UFCStatsFighterScraper:
-    def __init__(self, timeout: int = 15, delay: float = 0.25):
+    def __init__(self, browser: BrowserSession | None = None):
         self.base_url = "http://ufcstats.com/statistics/fighters"
-        self.headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
-        }
-        self.timeout = timeout
-        self.delay = delay
+        self._owns_browser = browser is None
+        self.browser = browser or BrowserSession()
+        if self._owns_browser:
+            self.browser.start()
 
-        self.scraper = requests.Session()
-        retry = Retry(
-            total=3,
-            backoff_factor=1.5,
-            status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods=["GET"],
-        )
-        adapter = HTTPAdapter(max_retries=retry)
-        self.scraper.mount("http://", adapter)
-        self.scraper.mount("https://", adapter)
+    def close(self) -> None:
+        if self._owns_browser:
+            self.browser.close()
 
-    def _get(self, url: str) -> requests.Response | None:
-        time.sleep(self.delay)
-        try:
-            return self.scraper.get(url, headers=self.headers, timeout=self.timeout)
-        except requests.RequestException as exc:
-            print(f"Request failed for {url}: {exc}")
-            return None
+    def __enter__(self) -> "UFCStatsFighterScraper":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        self.close()
+
+    def _get(self, url: str) -> PageResponse | None:
+        return self.browser.get(url)
 
     def get_all_fighters(self) -> list[Fighter]:
         fighters: list[Fighter] = []
@@ -152,7 +142,8 @@ class UFCStatsFighterScraper:
             return None
 
 if __name__ == "__main__":
-    scraper = UFCStatsFighterScraper()
-    fighters = scraper.get_all_fighters()
-    for fighter in fighters:
+    with UFCStatsFighterScraper() as scraper:
+        fighters = scraper.get_all_fighters()
+    print(f"Scraped {len(fighters)} fighters")
+    for fighter in fighters[:3]:
         print(fighter.model_dump_json())

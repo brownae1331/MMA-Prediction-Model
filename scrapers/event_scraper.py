@@ -1,20 +1,35 @@
-import requests
-from bs4 import BeautifulSoup
-from urllib.parse import urljoin
 from datetime import datetime
+from urllib.parse import urljoin
+
+from bs4 import BeautifulSoup
+
 from schemas.event import Event
+from scrapers.browser_session import BrowserSession
+
 
 class UFCStatsEventScraper:
-    def __init__(self):
+    def __init__(self, browser: BrowserSession | None = None):
         self.base_url = "http://ufcstats.com/statistics/events/"
-        self.scraper = requests.Session()
-        self.headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
-        }
+        self._owns_browser = browser is None
+        self.browser = browser or BrowserSession()
+        if self._owns_browser:
+            self.browser.start()
+
+    def close(self) -> None:
+        if self._owns_browser:
+            self.browser.close()
+
+    def __enter__(self) -> "UFCStatsEventScraper":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        self.close()
 
     def parse_events_from_page(self, page_path: str) -> list[Event]:
         url = urljoin(self.base_url, page_path)
-        response = self.scraper.get(url, headers=self.headers)
+        response = self.browser.get(url)
+        if response is None:
+            return []
         soup = BeautifulSoup(response.text, "html.parser")
 
         events = []
@@ -62,3 +77,10 @@ class UFCStatsEventScraper:
         events.extend(self.parse_events_from_page("upcoming?page=all"))
         events.append(self.get_ufc_1())
         return events
+
+if __name__ == "__main__":
+    with UFCStatsEventScraper() as scraper:
+        events = scraper.get_all_events()
+    print(f"Scraped {len(events)} events")
+    for event in events[:3]:
+        print(event.model_dump_json())

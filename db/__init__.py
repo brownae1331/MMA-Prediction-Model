@@ -1,5 +1,5 @@
 from db.database import Base, SessionLocal, engine, get_db
-from db.models import Event, Fight, Fighter
+from db.models import Event, Fight, FightRoundStats, Fighter
 
 __all__ = [
     "Base",
@@ -9,4 +9,5 @@ __all__ = [
     "Event",
     "Fighter",
     "Fight",
+    "FightRoundStats",
 ]
