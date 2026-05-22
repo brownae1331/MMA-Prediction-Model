@@ -3,6 +3,7 @@ from sqlalchemy import (
     Column,
     Date,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     String,
@@ -34,20 +35,23 @@ class Fighter(Base):
     url = Column(String, unique=True, nullable=False)
     name = Column(String, nullable=False)
     nickname = Column(String)
-    image_url = Column(String)
-    record = Column(String)
-    ranking = Column(String)
-    country = Column(String)
-    city = Column(String)
-    dob = Column(Date)
-    height = Column(String)
-    weight_class = Column(String)
-    association = Column(String)
-    last_updated_at = Column(DateTime(timezone=True))
 
-    __table_args__ = (
-        UniqueConstraint("name", "weight_class", name="uix_fighter_name_weight_class"),
-    )
+    height = Column(String)
+    weight = Column(String)
+    reach = Column(String)
+    stance = Column(String)
+    dob = Column(Date)
+
+    slpm = Column(Float)
+    str_acc = Column(Float)
+    sapm = Column(Float)
+    str_def = Column(Float)
+    td_avg = Column(Float)
+    td_acc = Column(Float)
+    td_def = Column(Float)
+    sub_avg = Column(Float)
+
+    last_updated_at = Column(DateTime(timezone=True))
 
 
 class Fight(Base):

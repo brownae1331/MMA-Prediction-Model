@@ -42,8 +42,9 @@ class UFCStatsEventScraper:
             ))
 
         return events
-
-    def get_ufc_1(self) -> Event:
+    
+    @staticmethod
+    def get_ufc_1() -> Event:
         """Doesn't show up in the completed events page, so we need to add it manually."""
         return Event(
             url="http://ufcstats.com/event-details/6420efac0578988b",
