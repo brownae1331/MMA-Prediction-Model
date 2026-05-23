@@ -73,8 +73,10 @@ class UFCStatsFightScraper:
 
         return stubs
 
-    def get_fight_detail(self, fight_url: str) -> FightDetail | None:
+    def get_fight_detail(self, fight_url: str, *, progress: str | None = None) -> FightDetail | None:
         """Parse a fight detail page into FightInfo + per-round stats."""
+        prefix = progress or "Scraping fight"
+        print(f"{prefix}: {fight_url}", flush=True)
         response = self._get(fight_url)
         if response is None:
             return None
@@ -90,8 +92,12 @@ class UFCStatsFightScraper:
     def get_fights_for_event(self, event_url: str) -> list[FightDetail]:
         """Scrape all fight detail pages for an event."""
         details: list[FightDetail] = []
-        for stub in self.get_fight_stubs_for_event(event_url):
-            detail = self.get_fight_detail(stub.url)
+        stubs = self.get_fight_stubs_for_event(event_url)
+        total = len(stubs)
+        for i, stub in enumerate(stubs, start=1):
+            wc = f" — {stub.weight_class}" if stub.weight_class else ""
+            progress = f"[{i}/{total}] Fight #{stub.match_number}{wc}"
+            detail = self.get_fight_detail(stub.url, progress=progress)
             if detail:
                 if not detail.fight.weight_class and stub.weight_class:
                     detail.fight.weight_class = stub.weight_class
@@ -362,4 +368,3 @@ class UFCStatsFightScraper:
             return int(value.strip())
         except ValueError:
             return None
-            
