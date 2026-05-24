@@ -6,8 +6,10 @@ launches a real Chromium browser so the JS challenge is solved automatically.
 
 from __future__ import annotations
 
+import json
 import time
 from dataclasses import dataclass
+from typing import Any
 
 from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright
 
@@ -50,6 +52,7 @@ class BrowserSession:
         self._browser: Browser | None = None
         self._context: BrowserContext | None = None
         self._page: Page | None = None
+        self._fightodds_warmed = False
 
     def __enter__(self) -> "BrowserSession":
         self.start()
@@ -79,6 +82,61 @@ class BrowserSession:
             self._browser = None
             self._context = None
             self._page = None
+            self._fightodds_warmed = False
+
+    def warm_fightodds(self) -> bool:
+        """Visit fightodds.io so Cloudflare allows api.fightodds.io/gql requests."""
+        if self._fightodds_warmed:
+            return True
+        response = self.get("https://fightodds.io/")
+        if response is None:
+            return False
+        self._fightodds_warmed = True
+        return True
+
+    def post_json(self, url: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+        """POST JSON via the browser context (bypasses Cloudflare on fightodds.io)."""
+        if self._context is None:
+            self.start()
+        assert self._context is not None
+
+        if "fightodds.io" in url and not self._fightodds_warmed:
+            if not self.warm_fightodds():
+                return None
+
+        max_attempts = 4
+        for attempt in range(max_attempts):
+            time.sleep(self.delay * (attempt + 1))
+            try:
+                response = self._context.request.post(
+                    url,
+                    data=json.dumps(payload),
+                    headers={"Content-Type": "application/json"},
+                    timeout=self.timeout_ms,
+                )
+            except Exception as exc:
+                print(f"Browser POST failed for {url}: {exc}")
+                return None
+
+            if response.status == 429 and attempt < max_attempts - 1:
+                wait_s = 2 ** (attempt + 1)
+                print(f"Rate limited (429), retrying in {wait_s}s...", flush=True)
+                time.sleep(wait_s)
+                continue
+
+            if response.status >= 400:
+                print(f"Browser POST {url} returned status {response.status}")
+                return None
+
+            break
+        else:
+            return None
+
+        try:
+            return response.json()
+        except Exception as exc:
+            print(f"Failed to parse JSON from {url}: {exc}")
+            return None
 
     def get(self, url: str) -> PageResponse | None:
         if self._page is None:

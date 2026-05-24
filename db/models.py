@@ -24,6 +24,7 @@ class Event(Base):
     date = Column(DateTime(timezone=True))
     location = Column(String)
     organizer = Column(String)
+    fightodds_event_pk = Column(Integer, unique=True, nullable=True)
     last_updated_at = Column(DateTime(timezone=True))
 
     fights = relationship("Fight", back_populates="event", cascade="all, delete-orphan")
@@ -73,6 +74,7 @@ class Fight(Base):
     time_format = Column(String)
     referee = Column(String)
     scorecard = Column(JSONB)
+    fightodds_slug = Column(String, unique=True, nullable=True)
     last_updated_at = Column(DateTime(timezone=True))
 
     __table_args__ = (
@@ -85,6 +87,11 @@ class Fight(Base):
     winner = relationship("Fighter", foreign_keys=[winner_id])
     round_stats = relationship(
         "FightRoundStats",
+        back_populates="fight",
+        cascade="all, delete-orphan",
+    )
+    odds = relationship(
+        "FightOdds",
         back_populates="fight",
         cascade="all, delete-orphan",
     )
@@ -133,4 +140,42 @@ class FightRoundStats(Base):
     )
 
     fight = relationship("Fight", back_populates="round_stats")
+    fighter = relationship("Fighter")
+
+
+class Bookmaker(Base):
+    __tablename__ = "bookmakers"
+
+    id = Column(Integer, primary_key=True)
+    slug = Column(String, unique=True, nullable=False)
+    name = Column(String, nullable=False)
+
+    odds = relationship("FightOdds", back_populates="bookmaker")
+
+
+class FightOdds(Base):
+    __tablename__ = "fight_odds"
+
+    id = Column(Integer, primary_key=True)
+    fight_id = Column(Integer, ForeignKey("fights.id", ondelete="CASCADE"), nullable=False)
+    bookmaker_id = Column(
+        Integer, ForeignKey("bookmakers.id", ondelete="CASCADE"), nullable=False
+    )
+    fighter_id = Column(Integer, ForeignKey("fighters.id", ondelete="CASCADE"), nullable=False)
+    american_odds = Column(Integer, nullable=True)
+    american_odds_open = Column(Integer, nullable=True)
+    captured_at = Column(DateTime(timezone=True), nullable=False)
+    source = Column(String, nullable=False, default="fightodds")
+
+    __table_args__ = (
+        UniqueConstraint(
+            "fight_id",
+            "bookmaker_id",
+            "fighter_id",
+            name="uix_fight_bookmaker_fighter_odds",
+        ),
+    )
+
+    fight = relationship("Fight", back_populates="odds")
+    bookmaker = relationship("Bookmaker", back_populates="odds")
     fighter = relationship("Fighter")

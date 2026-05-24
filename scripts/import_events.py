@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from db.database import SessionLocal
 from db.models import Event as EventModel
 from schemas.event import Event as EventSchema
-from scrapers.event_scraper import UFCStatsEventScraper
+from scrapers.ufcstats.event_scraper import UFCStatsEventScraper
 
 
 def upsert_event(session: Session, scraped_event: EventSchema) -> EventModel:

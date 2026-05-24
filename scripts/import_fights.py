@@ -12,7 +12,7 @@ from db.models import (
 )
 from schemas.fight import FightDetail, FightStub
 from scrapers.browser_session import BrowserSession
-from scrapers.fight_scraper import UFCStatsFightScraper
+from scrapers.ufcstats.fight_scraper import UFCStatsFightScraper
 
 
 def resolve_fighter_id(

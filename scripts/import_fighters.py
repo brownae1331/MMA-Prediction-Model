@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from db.database import SessionLocal
 from db.models import Fighter as FighterModel
 from schemas.fighter import Fighter as FighterSchema
-from scrapers.fighter_scraper import UFCStatsFighterScraper
+from scrapers.ufcstats.fighter_scraper import UFCStatsFighterScraper
 
 
 def upsert_fighter(session: Session, scraped: FighterSchema) -> tuple[FighterModel, bool]:
